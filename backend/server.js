@@ -8,11 +8,13 @@ const { randomUUID } = require("crypto");
 
 const games = new Map();
 
-const hintLimits = {
+const questionLimits = {
     easy: 15,
     medium: 10,
     hard: 5
 };
+
+const hintLimits = 3;
 
 app.use(cors());
 app.use(express.json());
@@ -24,7 +26,7 @@ app.get("/", (req, res) => {
 app.post("/api/game/start", (req, res) => {
     const { difficulty } = req.body;
 
-    if (!hintLimits[difficulty]) {
+    if (!questionLimits[difficulty]) {
         return res.status(400).json({
             error: "Invalid difficulty"
         });
@@ -52,16 +54,17 @@ app.post("/api/game/start", (req, res) => {
         id: gameId,
         difficulty: difficulty,
         character: selectedCharacter,
-        hintsRemaining: hintLimits[difficulty],
+        questionsRemaining: questionLimits[difficulty],
+        hintsRemaining: hintLimits,
         status: "playing",
         revealedHints: []
     };
-
     games.set(gameId, game);
 
     res.status(201).json({
         gameId: gameId,
         difficulty: difficulty,
+        questionsRemaining: game.questionsRemaining,
         hintsRemaining: game.hintsRemaining,
         status: game.status
     });
@@ -85,7 +88,7 @@ app.post("/api/game/:gameId/guess", (req, res) => {
         });
     }
 
-    if (!guess || typeof guess !== "string") {
+    if (typeof guess !== "string" || !guess.trim()) {
         return res.status(400).json({
             error: "Please enter a character name"
         });
@@ -115,7 +118,7 @@ app.post("/api/game/:gameId/guess", (req, res) => {
         });
     }
 
-    if (game.hintsRemaining > 0) {
+    if (game.questionsRemaining  > 0) {
         return res.json({
             correct: false,
             status: "playing",
@@ -164,7 +167,14 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
             });
         }
 
+        if (game.questionsRemaining <= 0) {
+            return res.status(400).json({
+                error: "No questions remaining. Make your final guess!"
+            });
+        }
+
         const interpretation = await interpretQuestion(question);
+        game.questionsRemaining--;
 
         const allowedFields = [
             "is_human",
@@ -183,15 +193,13 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
         if (!allowedFields.includes(interpretation.field)) {
             return res.json({
                 answer: "UNKNOWN",
-                message: "I couldn't understand that question. Try asking differently."
+                message: "I couldn't understand that question. Try asking differently.",
+                questionsRemaining: game.questionsRemaining
             });
         }
 
         const character = game.character;
         const { field, searchTerm } = interpretation;
-
-        console.log("Interpretation:", interpretation);
-        console.log("Character powers:", character.powers);
 
         let answer;
 
@@ -199,7 +207,8 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
             if (!searchTerm || !searchTerm.trim()) {
                 return res.json({
                     answer: "UNKNOWN",
-                    message: "Please ask about a specific power or team."
+                    message: "Please ask about a specific power or team.",
+                    questionsRemaining: game.questionsRemaining
                 });
             }       
 
@@ -220,20 +229,23 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
         if (answer === "UNSUPPORTED") {
             return res.json({
                 answer: "UNKNOWN",
-                message: "I can't answer that type of question yet."
+                message: "I can't answer that type of question yet.",
+                questionsRemaining: game.questionsRemaining
             });
         }
 
         if (typeof answer !== "boolean") {
             return res.json({
                 answer: "UNKNOWN",
-                message: "I couldn't determine the answer."
+                message: "I couldn't determine the answer.",
+                questionsRemaining: game.questionsRemaining
             });
         }
 
         return res.json({
             answer: answer ? "YES" : "NO",
-            field: field
+            field: field,
+            questionsRemaining: game.questionsRemaining
         });
 
     } catch (error) {
@@ -294,8 +306,9 @@ app.post("/api/game/:gameId/hint", async (req, res) => {
         return res.json({
             hint: generatedHint,
             hintsRemaining: game.hintsRemaining,
+            questionsRemaining: game.questionsRemaining,
             status: game.status
-        });
+        }); 
 
     } catch (error) {
         console.error("Hint error:", error);
