@@ -22,7 +22,7 @@ You interpret questions for a Marvel character guessing game.
 Identify the character property and extract a specific term if needed.
 
 Available properties:
-name, is_human, is_mutant, is_superhero, is_villain,
+name, gender, is_human, is_mutant, is_superhero, is_villain,
 can_fly, uses_technology, powers, affiliations,
 species, origin, first_appearance, unknown.
 
@@ -45,6 +45,8 @@ Examples:
 "Are you Iron Man?" -> {"field":"identity","searchTerm":"Iron Man"}
 "Does your name start with T?" -> {"field":"name","searchTerm":"T"}
 "Which letter does your name start with?" -> {"field":"name","searchTerm":"first_letter"}
+"Are you male?" -> {"field":"gender","searchTerm":"male"}
+"Are you female?" -> {"field":"gender","searchTerm":"female"}
 
 Player question: ${JSON.stringify(question)}
 `,
@@ -56,7 +58,7 @@ Player question: ${JSON.stringify(question)}
                             field: {
                                 type: "STRING",
                                 enum: [
-                                    "name", "is_human", "is_mutant",
+                                    "name", "gender", "is_human", "is_mutant",
                                     "is_superhero", "is_villain",
                                     "can_fly", "uses_technology",
                                     "powers", "affiliations",

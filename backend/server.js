@@ -180,6 +180,7 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
 
         const allowedFields = [
             "name",
+            "gender",
             "is_human",
             "is_mutant",
             "is_superhero",
@@ -208,7 +209,14 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
         
         let answer;
 
-        if (field === "name") {
+        if (field === "gender") {
+            if (!searchTerm || !searchTerm.trim()) {
+                 answer = "UNSUPPORTED";
+            } else {
+                answer = character.gender?.toLowerCase() === searchTerm.trim().toLowerCase();
+            }
+
+        } else if (field === "name") {
             const firstLetter = character.name.charAt(0).toLowerCase();
 
             if (searchTerm === "first_letter") {
