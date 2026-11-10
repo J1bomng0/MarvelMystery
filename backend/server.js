@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const characters = require("./data/characters.json");
-const { interpretQuestion, generateHint } = require("./gemini");
+const { interpretQuestion, generateHint, generateCharacterResponse } = require("./gemini");
 
 const app = express();
 const { randomUUID } = require("crypto");
@@ -114,7 +114,8 @@ app.post("/api/game/:gameId/guess", (req, res) => {
         return res.json({
             correct: true,
             status: "won",
-            message: "You found the character!"
+            message: "You found the character!",
+            character: game.character.name
         });
     }
 
@@ -122,6 +123,7 @@ app.post("/api/game/:gameId/guess", (req, res) => {
         return res.json({
             correct: false,
             status: "playing",
+            questionsRemaining: game.questionsRemaining,
             hintsRemaining: game.hintsRemaining,
             message: "Incorrect! Keep investigating."
         });
@@ -177,6 +179,7 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
         game.questionsRemaining--;
 
         const allowedFields = [
+            "name",
             "is_human",
             "is_mutant",
             "is_superhero",
@@ -187,7 +190,8 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
             "affiliations",
             "species",
             "origin",
-            "first_appearance"
+            "first_appearance",
+            "identity"
         ];
 
         if (!allowedFields.includes(interpretation.field)) {
@@ -201,29 +205,67 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
         const character = game.character;
         const { field, searchTerm } = interpretation;
 
+        
         let answer;
 
-        if (field === "powers" || field === "affiliations") {
+        if (field === "name") {
+            const firstLetter = character.name.charAt(0).toLowerCase();
+
+            if (searchTerm === "first_letter") {
+                answer = firstLetter.toUpperCase();
+            } else {
+                answer = firstLetter === searchTerm.trim().toLowerCase();
+            }
+
+        } else if (field === "identity") {
+
             if (!searchTerm || !searchTerm.trim()) {
-                return res.json({
-                    answer: "UNKNOWN",
-                    message: "Please ask about a specific power or team.",
-                    questionsRemaining: game.questionsRemaining
-                });
-            }       
+                answer = "UNSUPPORTED";
+            } else {
+                const names = [
+                    character.name,
+                    ...(character.aliases || [])
+                ];
 
-        const values = character[field] || [];
+                answer = names.some(name =>
+                    name.toLowerCase() === searchTerm.trim().toLowerCase()
+                );
+            }
 
-        answer = values.some(value => value.toLowerCase().includes(searchTerm.trim().toLowerCase())
-        );
-        }   else if (
+        } else if (field === "powers" || field === "affiliations") {
+
+            if (!searchTerm || !searchTerm.trim()) {
+                answer = "UNSUPPORTED";
+            } else {
+                const values = character[field] || [];
+
+                answer = values.some(value =>
+                    value.toLowerCase().includes(searchTerm.trim().toLowerCase())
+                );
+            }
+
+        } else if (
             field === "species" ||
             field === "origin" ||
             field === "first_appearance"
         ) {
             answer = "UNSUPPORTED";
+
         } else {
             answer = character[field];
+        }
+
+        // Correct identity guess = victory
+        if (field === "identity" && answer === true) {
+            game.status = "won";
+
+            return res.json({
+                answer: "YES",
+                field: "identity",
+                status: "won",
+                character: character.name,
+                questionsRemaining: game.questionsRemaining
+            });
         }
 
         if (answer === "UNSUPPORTED") {
@@ -234,7 +276,8 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
             });
         }
 
-        if (typeof answer !== "boolean") {
+        // Name questions can return either a boolean or a letter.
+        if (field !== "name" && typeof answer !== "boolean") {
             return res.json({
                 answer: "UNKNOWN",
                 message: "I couldn't determine the answer.",
@@ -242,8 +285,21 @@ app.post("/api/game/:gameId/ask", async (req, res) => {
             });
         }
 
+        const factualAnswer = typeof answer === "boolean"
+            ? (answer ? "YES" : "NO")
+            : answer;
+
+        const reply = await generateCharacterResponse(
+            question,
+            character,
+            factualAnswer
+        );
+
         return res.json({
-            answer: answer ? "YES" : "NO",
+            answer: typeof answer === "boolean"
+                ? (answer ? "YES" : "NO")
+                : answer,
+            message: reply,
             field: field,
             questionsRemaining: game.questionsRemaining
         });

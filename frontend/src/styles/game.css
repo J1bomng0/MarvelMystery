@@ -1,0 +1,63 @@
+/* Marvel Mystery — gameplay: chat, composer, result modal. */
+
+/* ---------- Chat ---------- */
+.chat {
+  position: absolute; top: 128px; left: 80px; right: 80px; bottom: 124px;
+  margin: 0; padding: 0 8px 0 0; list-style: none;
+  display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--red-line) transparent;
+}
+.msg { display: flex; gap: 14px; font-size: 30px; line-height: 1.05; }
+.msg .who { flex: none; font-family: var(--px); font-size: 13px; line-height: 26px; letter-spacing: 1px; }
+.msg.ai { color: var(--red); }
+.msg.ai:not(:first-child) { margin-top: 6px; padding-top: 18px; border-top: 2px dashed #2f2a32; }
+.msg.me { color: var(--cream); padding-left: 34px; }
+.caret { display: inline-block; width: 14px; height: 24px; margin-left: 8px; vertical-align: -3px; background: var(--red); animation: blink 1s steps(1) infinite; }
+
+.composer { position: absolute; left: 80px; right: 80px; top: 530px; height: 60px; display: flex; align-items: center; gap: 20px; z-index: 3; }
+.field {
+  flex: 1; height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 14px;
+  border: 3px solid var(--red-line); background: var(--panel);
+}
+.field:focus-within { border-color: var(--red); }
+.field .who { font-family: var(--px); font-size: 13px; letter-spacing: 1px; }
+.field input {
+  flex: 1; min-width: 0; padding: 0; border: 0; outline: none; background: transparent;
+  font-family: var(--body); font-size: 30px; color: var(--cream); caret-color: var(--red);
+}
+.composer .menu-btn { width: 150px; flex: none; font-size: 16px; }
+.composer .menu-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Result pop-up ---------- */
+.overlay { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(14,13,17,.78); }
+.dialog {
+  width: 540px; overflow: hidden; background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 10px 10px 0 var(--red-deep);
+}
+.dialog.lost { box-shadow: 10px 10px 0 #2a1014; }
+.dialog-bar {
+  height: 38px; padding: 0 8px 0 12px; display: flex; align-items: center; justify-content: space-between;
+  background: var(--red); border-bottom: 3px solid var(--ink);
+  font-family: var(--px); font-size: 11px; letter-spacing: 2px;
+}
+.close { width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border: 2px solid var(--ink); background: var(--cream); cursor: pointer; }
+.close:hover, .close:focus-visible { background: var(--ink); outline: none; }
+.close:hover path, .close:focus-visible path { stroke: var(--cream); }
+.dialog-body { display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+.kicker { display: flex; align-items: center; gap: 14px; font-size: 24px; letter-spacing: 4px; color: #7a1f29; }
+.kicker::before, .kicker::after { content: ''; width: 55px; border-top: 3px dashed #7a1f29; }
+.verdict {
+  margin: 18px 0 0; font-family: var(--px); font-size: 34px; line-height: 1; letter-spacing: 3px;
+  color: var(--ink); text-shadow: 3px 3px 0 var(--red); animation: bob 1.2s steps(2) infinite;
+}
+.lost .verdict { animation-name: shake; animation-duration: .6s; }
+.answer { margin: 26px 0 0; max-width: 430px; text-align: center; font-family: var(--px); font-size: 18px; line-height: 1.7; letter-spacing: 1px; color: #a8212f; }
+.dialog-actions { display: flex; align-items: center; gap: 22px; margin-top: 30px; }
+.dialog .menu-btn.is-selected { width: 170px; height: 48px; font-size: 15px; color: var(--ink); }
+.dialog .menu-btn.is-selected::before { border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--red-deep); }
+.btn-outline {
+  height: 48px; padding: 0 20px; cursor: pointer; background: transparent;
+  border: 3px solid #7a1f29; color: #7a1f29; font-family: var(--px); font-size: 13px; letter-spacing: 2px;
+}
+.btn-outline:hover, .btn-outline:focus-visible { background: #7a1f29; color: var(--cream); outline: none; }
+.silhouette { display: block; width: 300px; height: 126px; margin: 16px 0 -30px; }
